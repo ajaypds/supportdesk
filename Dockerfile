@@ -1,24 +1,33 @@
 # BUILD STAGE
 FROM eclipse-temurin:17-jdk-alpine AS builder
-# Set working directory inside the container
+
 WORKDIR /app
-# Copy Maven or Gradle build files first (for caching dependencies)
+
+# Copy Maven wrapper and build files first
 COPY pom.xml mvnw ./
 COPY .mvn .mvn
+
+# Make mvnw executable
+RUN chmod +x mvnw
+
+# Download dependencies
 RUN ./mvnw dependency:go-offline
-# Copy the entire project source
+
+# Copy source code
 COPY src src
-# Build the application JAR
+
+# Build the JAR
 RUN ./mvnw clean package -DskipTests
 
 
 # RUN STAGE
 FROM eclipse-temurin:17-jdk-alpine
-# Set working directory for the runtime container
+
 WORKDIR /app
-# Copy only the built JAR from the builder stage
+
+# Copy the built JAR
 COPY --from=builder /app/target/*.jar app.jar
-# Expose the application port
+
 EXPOSE 8080
-# Start the application
+
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
